@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 warnings.filterwarnings("ignore")
 
-FLOOR = .001
+FLOOR = 0.001
 
 
 def groupstats2fstat(avg, var, n):
@@ -41,10 +41,17 @@ def groupstats2fstat(avg, var, n):
     return f.fillna(0.0)
 
 
-def mrmr_base(K, relevance_func, redundancy_func,
-              relevance_args={}, redundancy_args={},
-              denominator_func=np.mean, only_same_domain=False,
-              return_scores=False, show_progress=True):
+def mrmr_base(
+    K,
+    relevance_func,
+    redundancy_func,
+    relevance_args={},
+    redundancy_args={},
+    denominator_func=np.mean,
+    only_same_domain=False,
+    return_scores=False,
+    show_progress=True,
+):
     """General function for mRMR algorithm.
 
     Parameters
@@ -104,27 +111,32 @@ def mrmr_base(K, relevance_func, redundancy_func,
     not_selected_features = features.copy()
 
     for i in tqdm(range(K), disable=not show_progress):
-
         score_numerator = relevance.loc[not_selected_features]
 
         if i > 0:
-
             last_selected_feature = selected_features[-1]
 
             if only_same_domain:
-                not_selected_features_sub = [c for c in not_selected_features if
-                                             c.split('_')[0] == last_selected_feature.split('_')[0]]
+                not_selected_features_sub = [
+                    c for c in not_selected_features if c.split("_")[0] == last_selected_feature.split("_")[0]
+                ]
             else:
                 not_selected_features_sub = not_selected_features
 
             if not_selected_features_sub:
-                redundancy.loc[not_selected_features_sub, last_selected_feature] = redundancy_func(
-                    target_column=last_selected_feature,
-                    features=not_selected_features_sub,
-                    **redundancy_args
-                ).fillna(FLOOR).abs().clip(FLOOR)
-                score_denominator = redundancy.loc[not_selected_features, selected_features].apply(
-                    denominator_func, axis=1).replace(1.0, float('Inf'))
+                redundancy.loc[not_selected_features_sub, last_selected_feature] = (
+                    redundancy_func(
+                        target_column=last_selected_feature, features=not_selected_features_sub, **redundancy_args
+                    )
+                    .fillna(FLOOR)
+                    .abs()
+                    .clip(FLOOR)
+                )
+                score_denominator = (
+                    redundancy.loc[not_selected_features, selected_features]
+                    .apply(denominator_func, axis=1)
+                    .replace(1.0, float("Inf"))
+                )
 
         else:
             score_denominator = pd.Series(1, index=features)

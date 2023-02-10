@@ -1,7 +1,7 @@
 def pd_dataframe2bq_query(df):
     query = ""
 
-    df_edit = df.applymap(lambda s: f'"{s}"' if type(s) == str else s).fillna('NULL')
+    df_edit = df.applymap(lambda s: f'"{s}"' if type(s) == str else s).fillna("NULL")
 
     for index in df_edit.index:
         query += "SELECT "

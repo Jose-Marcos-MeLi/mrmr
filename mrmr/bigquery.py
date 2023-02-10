@@ -24,7 +24,9 @@ def get_numeric_features(bq_client, table_id, target_column):
         List of numeric feature names.
     """
     schema = bq_client.get_table(table_id).schema
-    numeric_features = [field.name for field in schema if field.field_type in ['INTEGER', 'FLOAT'] and field.name != target_column]
+    numeric_features = [
+        field.name for field in schema if field.field_type in ["INTEGER", "FLOAT"] and field.name != target_column
+    ]
     return numeric_features
 
 
@@ -51,7 +53,8 @@ def correlation(target_column, features, bq_client, table_id):
     corr: pandas.Series of shape (n_variables, )
         Correlation between each column and the target column.
     """
-    jinja_query = """
+    jinja_query = (
+        """
 {% set COLUMNS = features%}
 SELECT
   {% for COLUMN in COLUMNS -%}
@@ -59,10 +62,12 @@ SELECT
   {% endfor -%}
 FROM 
   table_id
-    """ \
-        .replace('table_id', table_id) \
-        .replace('target_column', target_column) \
-        .replace('features', str(features))
+    """.replace(
+            "table_id", table_id
+        )
+        .replace("target_column", target_column)
+        .replace("features", str(features))
+    )
 
     corr = bq_client.query(query=jinja2.Template(jinja_query).render()).to_dataframe().iloc[0, :]
     corr.name = target_column
@@ -71,7 +76,8 @@ FROM
 
 
 def f_classif(target_column, features, bq_client, table_id):
-    """Compute F-statistic of one (discrete) target column and many (discrete or continuous) numeric columns of a BigQuery table
+    """Compute F-statistic of one (discrete) target column and many (discrete or continuous) numeric
+    columns of a BigQuery table
 
     Parameters
     ----------
@@ -93,7 +99,8 @@ def f_classif(target_column, features, bq_client, table_id):
     f: pandas.Series of shape (n_variables, )
         F-statistic of each numeric column grouped by the target column.
     """
-    jinja_query = """
+    jinja_query = (
+        """
 {% set COLUMNS = features%}
 SELECT 
   target_column,
@@ -104,22 +111,33 @@ FROM
   table_id
 GROUP BY 
   target_column
-    """\
-        .replace('table_id', table_id)\
-        .replace('target_column', target_column)\
-        .replace('features', str(features))
+    """.replace(
+            "table_id", table_id
+        )
+        .replace("target_column", target_column)
+        .replace("features", str(features))
+    )
 
-    avg = bq_client.query(
-        query=jinja2.Template(jinja_query.replace('METRIC', 'AVG')).render()
-    ).to_dataframe().set_index(target_column, drop = True).astype(float)
+    avg = (
+        bq_client.query(query=jinja2.Template(jinja_query.replace("METRIC", "AVG")).render())
+        .to_dataframe()
+        .set_index(target_column, drop=True)
+        .astype(float)
+    )
 
-    var = bq_client.query(
-        query=jinja2.Template(jinja_query.replace('METRIC', 'VAR_POP')).render()
-    ).to_dataframe().set_index(target_column, drop = True).astype(float)
+    var = (
+        bq_client.query(query=jinja2.Template(jinja_query.replace("METRIC", "VAR_POP")).render())
+        .to_dataframe()
+        .set_index(target_column, drop=True)
+        .astype(float)
+    )
 
-    n = bq_client.query(
-        query=jinja2.Template(jinja_query.replace('METRIC', 'COUNT')).render()
-    ).to_dataframe().set_index(target_column, drop = True).astype(float)
+    n = (
+        bq_client.query(query=jinja2.Template(jinja_query.replace("METRIC", "COUNT")).render())
+        .to_dataframe()
+        .set_index(target_column, drop=True)
+        .astype(float)
+    )
 
     f = groupstats2fstat(avg=avg, var=var, n=n)
     f.name = target_column
@@ -148,13 +166,14 @@ def f_regression(target_column, features, bq_client, table_id):
 
     features: list of str
         List of numeric column names.
-    
+
     Returns
     -------
     f: pandas.Series of shape (n_variables, )
         F-statistic between each column and the target column.
     """
-    jinja_query = """
+    jinja_query = (
+        """
 {% set COLUMNS = features%}
 SELECT
   {% for COLUMN in COLUMNS -%}
@@ -162,26 +181,36 @@ SELECT
   {% endfor -%}
 FROM 
   table_id
-    """ \
-        .replace('table_id', table_id) \
-        .replace('target_column', target_column) \
-        .replace('features', str(features))
+    """.replace(
+            "table_id", table_id
+        )
+        .replace("target_column", target_column)
+        .replace("features", str(features))
+    )
 
     corr_coef = correlation(target_column=target_column, features=features, bq_client=bq_client, table_id=table_id)
 
-    n = bq_client.query(query=jinja2.Template(jinja_query).render()).to_dataframe().iloc[0,:]
+    n = bq_client.query(query=jinja2.Template(jinja_query).render()).to_dataframe().iloc[0, :]
     n.name = target_column
 
     deg_of_freedom = n - 2
-    corr_coef_squared = corr_coef ** 2
+    corr_coef_squared = corr_coef**2
     f = corr_coef_squared / (1 - corr_coef_squared) * deg_of_freedom
 
     return f
 
 
-def mrmr_classif(bq_client, table_id, K, target_column,
-                 features=None, denominator='mean', only_same_domain=False,
-                 return_scores=False, show_progress=True):
+def mrmr_classif(
+    bq_client,
+    table_id,
+    K,
+    target_column,
+    features=None,
+    denominator="mean",
+    only_same_domain=False,
+    return_scores=False,
+    show_progress=True,
+):
     """MRMR feature selection for a classification task
 
     Parameters
@@ -230,27 +259,47 @@ def mrmr_classif(bq_client, table_id, K, target_column,
     if features is None:
         features = get_numeric_features(bq_client=bq_client, table_id=table_id, target_column=target_column)
 
-    if type(denominator) == str and denominator == 'mean':
+    if type(denominator) == str and denominator == "mean":
         denominator_func = np.mean
-    elif type(denominator) == str and denominator == 'max':
+    elif type(denominator) == str and denominator == "max":
         denominator_func = np.max
     elif type(denominator) == str:
         raise ValueError("Invalid denominator function. It should be one of ['mean', 'max'].")
     else:
         denominator_func = denominator
 
-    relevance_args = {'bq_client':bq_client, 'table_id':table_id, 'target_column':target_column, 'features':features}
-    redundancy_args = {'bq_client':bq_client, 'table_id':table_id}
+    relevance_args = {
+        "bq_client": bq_client,
+        "table_id": table_id,
+        "target_column": target_column,
+        "features": features,
+    }
+    redundancy_args = {"bq_client": bq_client, "table_id": table_id}
 
-    return mrmr_base(K=K, relevance_func=f_classif, redundancy_func=correlation,
-                     relevance_args=relevance_args, redundancy_args=redundancy_args,
-                     denominator_func=denominator_func, only_same_domain=only_same_domain,
-                     return_scores=return_scores, show_progress=show_progress)
+    return mrmr_base(
+        K=K,
+        relevance_func=f_classif,
+        redundancy_func=correlation,
+        relevance_args=relevance_args,
+        redundancy_args=redundancy_args,
+        denominator_func=denominator_func,
+        only_same_domain=only_same_domain,
+        return_scores=return_scores,
+        show_progress=show_progress,
+    )
 
 
-def mrmr_regression(bq_client, table_id, target_column, K,
-                    features=None, denominator='mean', only_same_domain=False,
-                    return_scores=False, show_progress=True):
+def mrmr_regression(
+    bq_client,
+    table_id,
+    target_column,
+    K,
+    features=None,
+    denominator="mean",
+    only_same_domain=False,
+    return_scores=False,
+    show_progress=True,
+):
     """MRMR feature selection for a regression task
 
     Parameters
@@ -298,19 +347,31 @@ def mrmr_regression(bq_client, table_id, target_column, K,
     if features is None:
         features = get_numeric_features(bq_client=bq_client, table_id=table_id, target_column=target_column)
 
-    if type(denominator) == str and denominator == 'mean':
+    if type(denominator) == str and denominator == "mean":
         denominator_func = np.mean
-    elif type(denominator) == str and denominator == 'max':
+    elif type(denominator) == str and denominator == "max":
         denominator_func = np.max
     elif type(denominator) == str:
         raise ValueError("Invalid denominator function. It should be one of ['mean', 'max'].")
     else:
         denominator_func = denominator
 
-    relevance_args = {'bq_client':bq_client, 'table_id':table_id, 'target_column':target_column, 'features':features}
-    redundancy_args = {'bq_client':bq_client, 'table_id':table_id}
+    relevance_args = {
+        "bq_client": bq_client,
+        "table_id": table_id,
+        "target_column": target_column,
+        "features": features,
+    }
+    redundancy_args = {"bq_client": bq_client, "table_id": table_id}
 
-    return mrmr_base(K=K, relevance_func=f_regression, redundancy_func=correlation,
-                     relevance_args=relevance_args, redundancy_args=redundancy_args,
-                     denominator_func=denominator_func, only_same_domain=only_same_domain,
-                     return_scores=return_scores, show_progress=show_progress)
+    return mrmr_base(
+        K=K,
+        relevance_func=f_regression,
+        redundancy_func=correlation,
+        relevance_args=relevance_args,
+        redundancy_args=redundancy_args,
+        denominator_func=denominator_func,
+        only_same_domain=only_same_domain,
+        return_scores=return_scores,
+        show_progress=show_progress,
+    )

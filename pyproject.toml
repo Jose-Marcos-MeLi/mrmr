@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "mrmr"
+version = "0.1.0"
+description = "minimum-Redundancy-Maximum-Relevance algorithm for feature selection"
+authors = ["Samuele Mazzanti <mazzanti.sam@gmail.com>"]
+license = "GNU General Public License v3.0"
+
+[tool.poetry.dependencies]
+python = "3.8.*"
+category-encoders = "^2.6.0"
+Jinja2 = "^3.1.2"
+tqdm = "^4.64.1"
+pandas = "^1.5.3"
+numpy = "^1.24.2"
+scikit-learn = "^1.2.1"
+joblib = "^1.2.0"
+scipy = "^1.10.0"
+google-cloud-bigquery = {version = "^3.5.0", optional = true}
+pyspark = {version = "^3.3.1", optional = true}
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.2.1"
+flake8 = "<6"
+black = "^23.1.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 119
+include = '\.pyi?$'

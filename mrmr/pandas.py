@@ -14,16 +14,13 @@ from .main import mrmr_base
 def parallel_df(func, df, series, n_jobs):
     n_jobs = min(cpu_count(), len(df.columns)) if n_jobs == -1 else min(cpu_count(), n_jobs)
     col_chunks = np.array_split(range(len(df.columns)), n_jobs)
-    lst = Parallel(n_jobs=n_jobs)(
-        delayed(func)(df.iloc[:, col_chunk], series)
-        for col_chunk in col_chunks
-    )
+    lst = Parallel(n_jobs=n_jobs)(delayed(func)(df.iloc[:, col_chunk], series) for col_chunk in col_chunks)
     return pd.concat(lst)
 
 
 def _f_classif(X, y):
     def _f_classif_series(x, y):
-        x_not_na = ~ x.isna()
+        x_not_na = ~x.isna()
         if x_not_na.sum() == 0:
             return 0
         return sklearn_f_classif(x[x_not_na].to_frame(), y[x_not_na])[0][0]
@@ -33,7 +30,7 @@ def _f_classif(X, y):
 
 def _f_regression(X, y):
     def _f_regression_series(x, y):
-        x_not_na = ~ x.isna()
+        x_not_na = ~x.isna()
         if x_not_na.sum() == 0:
             return 0
         return sklearn_f_regression(x[x_not_na].to_frame(), y[x_not_na])[0][0]
@@ -51,7 +48,7 @@ def f_regression(X, y, n_jobs):
 
 def _ks_classif(X, y):
     def _ks_classif_series(x, y):
-        x_not_na = ~ x.isna()
+        x_not_na = ~x.isna()
         if x_not_na.sum() == 0:
             return 0
         x = x[x_not_na]
@@ -84,20 +81,27 @@ def correlation(target_column, features, X, n_jobs):
 
 def encode_df(X, y, cat_features, cat_encoding):
     ENCODERS = {
-        'leave_one_out': ce.LeaveOneOutEncoder(cols=cat_features, handle_missing='return_nan'),
-        'james_stein': ce.JamesSteinEncoder(cols=cat_features, handle_missing='return_nan'),
-        'target': ce.TargetEncoder(cols=cat_features, handle_missing='return_nan')
+        "leave_one_out": ce.LeaveOneOutEncoder(cols=cat_features, handle_missing="return_nan"),
+        "james_stein": ce.JamesSteinEncoder(cols=cat_features, handle_missing="return_nan"),
+        "target": ce.TargetEncoder(cols=cat_features, handle_missing="return_nan"),
     }
     X = ENCODERS[cat_encoding].fit_transform(X, y)
     return X
 
 
 def mrmr_classif(
-        X, y, K,
-        relevance='f', redundancy='c', denominator='mean',
-        cat_features=None, cat_encoding='leave_one_out',
-        only_same_domain=False, return_scores=False,
-        n_jobs=-1, show_progress=True
+    X,
+    y,
+    K,
+    relevance="f",
+    redundancy="c",
+    denominator="mean",
+    cat_features=None,
+    cat_encoding="leave_one_out",
+    only_same_domain=False,
+    return_scores=False,
+    n_jobs=-1,
+    show_progress=True,
 ):
     """MRMR feature selection for a classification task
     Parameters
@@ -161,25 +165,38 @@ def mrmr_classif(
     else:
         relevance_func = relevance
 
-    redundancy_func = functools.partial(correlation, n_jobs=n_jobs) if redundancy == 'c' else redundancy
-    denominator_func = np.mean if denominator == 'mean' else (
-        np.max if denominator == 'max' else denominator)
+    redundancy_func = functools.partial(correlation, n_jobs=n_jobs) if redundancy == "c" else redundancy
+    denominator_func = np.mean if denominator == "mean" else (np.max if denominator == "max" else denominator)
 
-    relevance_args = {'X': X, 'y': y}
-    redundancy_args = {'X': X}
+    relevance_args = {"X": X, "y": y}
+    redundancy_args = {"X": X}
 
-    return mrmr_base(K=K, relevance_func=relevance_func, redundancy_func=redundancy_func,
-                     relevance_args=relevance_args, redundancy_args=redundancy_args,
-                     denominator_func=denominator_func, only_same_domain=only_same_domain,
-                     return_scores=return_scores, show_progress=show_progress)
+    return mrmr_base(
+        K=K,
+        relevance_func=relevance_func,
+        redundancy_func=redundancy_func,
+        relevance_args=relevance_args,
+        redundancy_args=redundancy_args,
+        denominator_func=denominator_func,
+        only_same_domain=only_same_domain,
+        return_scores=return_scores,
+        show_progress=show_progress,
+    )
 
 
 def mrmr_regression(
-        X, y, K,
-        relevance='f', redundancy='c', denominator='mean',
-        cat_features=None, cat_encoding='leave_one_out',
-        only_same_domain=False, return_scores=False,
-        n_jobs=-1, show_progress=True
+    X,
+    y,
+    K,
+    relevance="f",
+    redundancy="c",
+    denominator="mean",
+    cat_features=None,
+    cat_encoding="leave_one_out",
+    only_same_domain=False,
+    return_scores=False,
+    n_jobs=-1,
+    show_progress=True,
 ):
     """MRMR feature selection for a regression task
     Parameters
@@ -233,16 +250,25 @@ def mrmr_regression(
     if cat_features:
         X = encode_df(X=X, y=y, cat_features=cat_features, cat_encoding=cat_encoding)
 
-    relevance_func = functools.partial(f_regression, n_jobs=n_jobs) if relevance == 'f' else (
-        random_forest_regression if relevance == 'rf' else relevance)
-    redundancy_func = functools.partial(correlation, n_jobs=n_jobs) if redundancy == 'c' else redundancy
-    denominator_func = np.mean if denominator == 'mean' else (
-        np.max if denominator == 'max' else denominator)
+    relevance_func = (
+        functools.partial(f_regression, n_jobs=n_jobs)
+        if relevance == "f"
+        else (random_forest_regression if relevance == "rf" else relevance)
+    )
+    redundancy_func = functools.partial(correlation, n_jobs=n_jobs) if redundancy == "c" else redundancy
+    denominator_func = np.mean if denominator == "mean" else (np.max if denominator == "max" else denominator)
 
-    relevance_args = {'X': X, 'y': y}
-    redundancy_args = {'X': X}
+    relevance_args = {"X": X, "y": y}
+    redundancy_args = {"X": X}
 
-    return mrmr_base(K=K, relevance_func=relevance_func, redundancy_func=redundancy_func,
-                     relevance_args=relevance_args, redundancy_args=redundancy_args,
-                     denominator_func=denominator_func, only_same_domain=only_same_domain,
-                     return_scores=return_scores, show_progress=show_progress)
+    return mrmr_base(
+        K=K,
+        relevance_func=relevance_func,
+        redundancy_func=redundancy_func,
+        relevance_args=relevance_args,
+        redundancy_args=redundancy_args,
+        denominator_func=denominator_func,
+        only_same_domain=only_same_domain,
+        return_scores=return_scores,
+        show_progress=show_progress,
+    )
